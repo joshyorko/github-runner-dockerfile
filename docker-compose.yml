@@ -1,7 +1,9 @@
 services:
   runner:
     build: .
-    restart: always
+    restart: unless-stopped
+    networks:
+      - backend
     env_file: .env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -12,3 +14,21 @@ services:
         reservations:
           cpus: 0.5
           memory: 1024M
+  cache:
+    image: ghcr.io/falcondev-oss/github-actions-cache-server:latest
+    restart: unless-stopped
+    networks:
+      - backend
+    ports:
+      - '3000:3000'
+    environment:
+      API_BASE_URL: http://cache:3000
+    volumes:
+      - cache:/app/.data
+
+volumes:
+  cache:
+
+networks:
+    backend:
+        external: false

@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 
-ARG RUNNER_VERSION="2.321.0"
+ARG RUNNER_VERSION="2.322.0"
 
 # Prevents installdependencies.sh from prompting the user and blocking the image creation
 ARG DEBIAN_FRONTEND=noninteractive
@@ -17,6 +17,8 @@ RUN cd /home/docker && mkdir actions-runner && cd actions-runner \
     && tar xzf ./actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
 
 RUN chown -R docker /home/docker && /home/docker/actions-runner/bin/installdependencies.sh
+
+RUN sed -i 's/\x41\x00\x43\x00\x54\x00\x49\x00\x4F\x00\x4E\x00\x53\x00\x5F\x00\x52\x00\x45\x00\x53\x00\x55\x00\x4C\x00\x54\x00\x53\x00\x5F\x00\x55\x00\x52\x00\x4C\x00/\x41\x00\x43\x00\x54\x00\x49\x00\x4F\x00\x4E\x00\x53\x00\x5F\x00\x52\x00\x45\x00\x53\x00\x55\x00\x4C\x00\x54\x00\x53\x00\x5F\x00\x4F\x00\x52\x00\x4C\x00/g' /home/docker/actions-runner/bin/Runner.Worker.dll
 
 COPY start.sh start.sh
 
