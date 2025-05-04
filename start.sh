@@ -1,34 +1,83 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-REPOSITORY=$REPO
-ACCESS_TOKEN=$TOKEN
+: "${REPO:?Missing REPO}"
+: "${ACCESS_TOKEN:?Missing ACCESS_TOKEN}"
 
-echo "REPO ${REPOSITORY}"
-echo "ACCESS_TOKEN ${ACCESS_TOKEN}"
-
-
+# Defaults
+RUNNER_NAME="${RUNNER_NAME:-$(hostname)}"
+RUNNER_WORKDIR="${RUNNER_WORKDIR:-_work}"
+RUNNER_GROUP="${RUNNER_GROUP:-Default}"
+RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,Linux,X64}"
 
 cd /home/docker/actions-runner
-REG_TOKEN=$(curl -X POST -H "Authorization: token ${ACCESS_TOKEN}" -H "Accept: application/vnd.github+json" https://api.github.com/repos/${REPOSITORY}/actions/runners/registration-token | jq .token --raw-output)
-echo "REGISTRATION_TOKEN ${REG_TOKEN}"
 
-#./config.sh --unattended \
-#  --url "https://github.com/${REPOSITORY}" \
-#  --token "${REG_TOKEN}" \
-#  --runnergroup "Default" \
-#  --name "devpod-default-gi-e7bcd" \
-#  --labels "self-hosted,self-hosted-test" \
-#  --work "_work" \
-#  --replace
+# Check GitHub connectivity
+echo "[debug] Checking connectivity to GitHub..."
+if ! curl -sf https://api.github.com/zen > /dev/null; then
+  echo "[error] Cannot reach GitHub API. Please check network connectivity." >&2
+  exit 1
+fi
 
-./config.sh --url https://github.com/${REPOSITORY} --token ${REG_TOKEN}
+# Get registration token
+echo "[debug] Getting registration token..."
+REG_TOKEN=$(curl -s -X POST -H "Authorization: token ${ACCESS_TOKEN}" \
+    "https://api.github.com/repos/${REPO}/actions/runners/registration-token" \
+    | jq -r .token)
 
+if [ -z "${REG_TOKEN}" ] || [ "${REG_TOKEN}" = "null" ]; then
+    echo "[error] Failed to get registration token" >&2
+    exit 1
+fi
+
+# Increase default connection timeouts
+export VSS_AGENT_CONNECT_TIMEOUT=180
+export VSS_AGENT_DOWNLOAD_TIMEOUT=180
+
+# Configure runner in unattended mode
+echo "[debug] Configuring runner (non-interactive)..."
+set -x # Enable command tracing
+./config.sh --unattended \
+  --url "https://github.com/${REPO}" \
+  --token "${REG_TOKEN}" \
+  --name "${RUNNER_NAME}" \
+  --work "${RUNNER_WORKDIR}" \
+  --runnergroup "${RUNNER_GROUP}" \
+  --labels "${RUNNER_LABELS}" \
+  --replace
+set +x # Disable command tracing
+exit_code=$?
+
+# ▶ dump the newest diagnostic log if configure failed or hung
+latest_diag="$(ls -1t _diag | head -n1)"
+echo "[debug] ----- _diag/${latest_diag} -----"
+tail -n +1 "_diag/${latest_diag}" | sed 's/^/    /'
+echo "[debug] ----- end diag -----"
+
+if [[ $exit_code -ne 0 ]]; then
+  echo "[error] config.sh exited with $exit_code – see diagnostic above"
+  exit $exit_code
+fi
+
+echo "[debug] Runner configured"
+
+# Cleanup logic on exit
 cleanup() {
-    echo "Removing runner..."
-    ./config.sh remove --unattended --token ${REG_TOKEN}
+  echo "[debug] Cleaning up runner..."
+  # Get a removal token
+  REMOVE_TOKEN=$(curl -s -X POST -H "Authorization: token ${ACCESS_TOKEN}" \
+      "https://api.github.com/repos/${REPO}/actions/runners/remove-token" \
+      | jq -r .token)
+  
+  if [ -n "${REMOVE_TOKEN}" ] && [ "${REMOVE_TOKEN}" != "null" ]; then
+    ./config.sh remove --unattended --token "${REMOVE_TOKEN}" || echo "[warning] Failed to remove runner automatically."
+  else
+    echo "[warning] Failed to get removal token"
+  fi
 }
+trap 'cleanup; exit 130' INT TERM
+trap 'cleanup; exit 0' EXIT
 
-trap 'cleanup; exit 130' INT
-trap 'cleanup; exit 143' TERM
-
-./run.sh & wait $!
+# Launch the long-lived runner process
+echo "[debug] Starting runner..."
+exec ./run.sh
