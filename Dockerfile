@@ -10,9 +10,13 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update -y && apt upgrade -y && useradd -m docker
 RUN apt install -y --no-install-recommends \
     curl jq build-essential libssl-dev libffi-dev libicu-dev python3 python3-venv python3-dev python3-pip git unzip \
-    ca-certificates openssl \
+    ca-certificates openssl zstd \
     # Network utilities for diagnostics
     iputils-ping iproute2 dnsutils
+
+# Install RCC (Robocorp Control Center)
+RUN curl -o /usr/local/bin/rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc && \
+    chmod a+x /usr/local/bin/rcc
 
 # Update CA certificates and configure git
 RUN update-ca-certificates && \
@@ -31,6 +35,9 @@ RUN apt install -y libglib2.0-0t64 libnss3 libnspr4 libdbus-1-3 libatk1.0-0t64 l
 RUN cd /home/docker && mkdir actions-runner && cd actions-runner \
     && curl -O -L https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz \
     && tar xzf ./actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz
+
+# Patch runner binary to prevent overwriting custom ACTIONS_RESULTS_URL
+RUN sed -i 's/\x41\x00\x43\x00\x54\x00\x49\x00\x4F\x00\x4E\x00\x53\x00\x5F\x00\x52\x00\x45\x00\x53\x00\x55\x00\x4C\x00\x54\x00\x53\x00\x5F\x00\x55\x00\x52\x00\x4C\x00/\x41\x00\x43\x00\x54\x00\x49\x00\x4F\x00\x4E\x00\x53\x00\x5F\x00\x52\x00\x45\x00\x53\x00\x55\x00\x4C\x00\x54\x00\x53\x00\x5F\x00\x4F\x00\x52\x00\x4C\x00/g' /home/docker/actions-runner/bin/Runner.Worker.dll
 
 RUN chown -R docker:docker /home/docker/actions-runner
 
