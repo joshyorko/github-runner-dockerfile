@@ -5,10 +5,14 @@ set -euo pipefail
 : "${ACCESS_TOKEN:?Missing ACCESS_TOKEN}"
 
 # Defaults
-RUNNER_NAME="${RUNNER_NAME:-$(hostname)}"
+SERVICE_NAME="${SERVICE_NAME:-github-runner}"
+ENVIRONMENT="${ENVIRONMENT:-prod}"
+SLOT="${SLOT:-01}"
+TIMESTAMP="$(date +%Y%m%dT%H%M%S)"
+RUNNER_NAME="${RUNNER_NAME:-runner-${SERVICE_NAME}-${ENVIRONMENT}-${SLOT}-${TIMESTAMP}}"
 RUNNER_WORKDIR="${RUNNER_WORKDIR:-_work}"
 RUNNER_GROUP="${RUNNER_GROUP:-Default}"
-RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,Linux,X64}"
+RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,${SERVICE_NAME},${ENVIRONMENT},slot-${SLOT}}"
 
 cd /home/docker/actions-runner
 

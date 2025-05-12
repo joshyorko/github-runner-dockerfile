@@ -7,8 +7,12 @@ services:
       - backend
     env_file: .env
     environment:
-      - RUNNER_NAME=runner-{{.Task.Slot}}
-      - RUNNER_LABELS=self-hosted-{{printf "%02d" .Task.Slot}}
+      - SERVICE_NAME=github-runner
+      - ENVIRONMENT=prod
+      - RUNNER_SLOT={{printf "%02d" .Task.Slot}}
+      - RUNNER_TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+      - RUNNER_NAME=runner-${SERVICE_NAME}-${ENVIRONMENT}-slot${RUNNER_SLOT}-${RUNNER_TIMESTAMP}
+      - RUNNER_LABELS=self-hosted,${SERVICE_NAME},${ENVIRONMENT},slot-${RUNNER_SLOT}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
