@@ -1,10 +1,14 @@
 services:
   runner:
     build: .
+    hostname: "runner-{{.Task.Slot}}"
     restart: unless-stopped
     networks:
       - backend
     env_file: .env
+    environment:
+      - RUNNER_NAME=runner-{{.Task.Slot}}
+      - RUNNER_LABELS=self-hosted-{{printf "%02d" .Task.Slot}}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
