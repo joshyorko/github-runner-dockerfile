@@ -10,6 +10,41 @@ Credit to [testdriven.io](https://testdriven.io/blog/github-actions-docker/) for
 
 Whene generating your GitHub PAT you will need to include `repo`, `workflow`, and `admin:org` permissions.
 
+## Overview
+
+This repository provides tools and scripts for managing GitHub Actions runners, including support for multi-architecture Docker images and a secure script for managing local runners.
+
+## Managing Local Runners
+
+This repository provides a `manage-local.sh` script to help manage local GitHub Actions runner containers. The script can launch or tear down runners interactively or start a specific number of runners in one command.
+
+Prerequisites:
+
+1. Create a `.env` file in the root directory with the following variables:
+   ```env
+   REPO=owner/repo
+   ACCESS_TOKEN=your-github-personal-access-token
+   SERVICE_NAME=your-service-name
+   ENVIRONMENT=dev
+   ```
+2. Make the script executable:
+   ```bash
+   chmod +x manage-local.sh
+   ```
+
+Usage:
+
+- To run the interactive menu:
+  ```bash
+  ./manage-local.sh
+  ```
+- To start N runners directly:
+  ```bash
+  ./manage-local.sh 4
+  ```
+
+The script will load variables from `.env` and prompt you for any that are missing.
+
 ## Multi-Architecture Support
 
 This repository now supports multi-architecture Docker image builds and deployments for GitHub Actions runners across both arm64 and amd64 environments.
@@ -27,7 +62,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t <your-dockerhub-userna
 To deploy the multi-arch images, you can use the following command:
 
 ```sh
-docker run -e REPO=<owner>/<repo> -e TOKEN=<your-github-personal-access-token> <your-dockerhub-username>/github-runner:latest
+docker run -e REPO=<owner>/<repo> -e ACCESS_TOKEN=<your-github-personal-access-token> -e SERVICE_NAME=<your-service-name> -e ENVIRONMENT=<environment> <your-dockerhub-username>/github-runner:latest
 ```
 
 Alternatively, you can use `docker-compose` to deploy the multi-arch images:
@@ -70,43 +105,28 @@ Make sure to replace `<your-dockerhub-username>` with your actual Docker Hub use
 To use the GitHub Actions runner, you need to set the following environment variables:
 
 - `REPO`: The owner and repository name in the format `<owner>/<repo>`.
-- `TOKEN`: Your GitHub personal access token with `repo`, `workflow`, and `admin:org` permissions.
+- `ACCESS_TOKEN`: Your GitHub personal access token with `repo`, `workflow`, and `admin:org` permissions.
+- `SERVICE_NAME`: A name to label your runner service.
+- `ENVIRONMENT`: The environment name (e.g. dev, prod).
 
-You can set these environment variables in a `.env` file or pass them directly to the `docker run` command.
+You can set these in your `.env` file or pass them directly to `docker run`.
 
 Example `.env` file:
 
 ```env
 REPO=owner/repo
-TOKEN=your-github-personal-access-token
+ACCESS_TOKEN=your-github-personal-access-token
+SERVICE_NAME=github-runner
+ENVIRONMENT=dev
 ```
 
 Example `docker run` command:
 
 ```sh
-docker run -e REPO=owner/repo -e TOKEN=your-github-personal-access-token <your-dockerhub-username>/github-runner:latest
+docker run \
+  -e REPO=owner/repo \
+  -e ACCESS_TOKEN=your-github-personal-access-token \
+  -e SERVICE_NAME=github-runner \
+  -e ENVIRONMENT=dev \
+  <your-dockerhub-username>/github-runner:latest
 ```
-
-## Teardown Local Runners
-
-Use `tear-down-local.sh` to securely remove local GitHub runner containers:
-
-1. Encrypt your `.env`:
-
-   ```bash
-   ansible-vault encrypt .env --output .env.enc
-   ```
-
-2. Add `ANSIBLE_VAULT_PASSWORD` to `.env.example` and set it in your environment or vault password file.
-
-3. Run the teardown script:
-
-   ```bash
-   ./tear-down-local.sh
-   ```
-
-This will:
-- Prompt for your Ansible Vault password.
-- Decrypt `.env.enc` to retrieve `ACCESS_TOKEN` and `REPO`.
-- Fetch removal token and remove all runner containers.
-- Bring down the Docker Compose environment.
