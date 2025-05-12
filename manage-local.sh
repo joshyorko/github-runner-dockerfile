@@ -145,6 +145,10 @@ start_runners() {
     exit 1
   fi
 
+  # Ensure cache container is up
+  log "info" "Bringing up cache container (and dependencies) via compose..."
+  ${COMPOSE_CMD} up -d cache
+
   # Count existing runner containers
   local existing_count
   existing_count=$(list_runner_containers | wc -l | tr -d ' ')
