@@ -83,3 +83,27 @@ Example `docker run` command:
 ```sh
 docker run -e REPO=owner/repo -e TOKEN=your-github-personal-access-token <your-dockerhub-username>/github-runner:latest
 ```
+
+## Teardown Local Runners
+
+Use `tear-down-local.sh` to securely remove local GitHub runner containers:
+
+1. Encrypt your `.env`:
+
+   ```bash
+   ansible-vault encrypt .env --output .env.enc
+   ```
+
+2. Add `ANSIBLE_VAULT_PASSWORD` to `.env.example` and set it in your environment or vault password file.
+
+3. Run the teardown script:
+
+   ```bash
+   ./tear-down-local.sh
+   ```
+
+This will:
+- Prompt for your Ansible Vault password.
+- Decrypt `.env.enc` to retrieve `ACCESS_TOKEN` and `REPO`.
+- Fetch removal token and remove all runner containers.
+- Bring down the Docker Compose environment.
