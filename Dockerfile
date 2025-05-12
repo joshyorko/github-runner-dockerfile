@@ -12,9 +12,7 @@ RUN apt install -y --no-install-recommends \
     curl jq build-essential libssl-dev libffi-dev libicu-dev python3 python3-venv python3-dev python3-pip git unzip \
     ca-certificates openssl zstd \
     # Network utilities for diagnostics
-    iputils-ping iproute2 dnsutils \
-    # Add Ansible
-    ansible
+    iputils-ping iproute2 dnsutils
 
 # Install RCC (Robocorp Control Center)
 RUN curl -o /usr/local/bin/rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc && \

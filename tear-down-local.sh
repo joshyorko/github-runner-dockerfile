@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Prompt for vault password
-echo -n "Vault password: "
-read -s VAULT_PASS
-echo
+# Load variables directly from .env
+if [[ ! -f .env ]]; then
+  echo "[error] .env file not found. Please create it before running this script." >&2
+  exit 1
+fi
 
-# Decrypt .env.enc to temporary .env
-echo "[debug] Decrypting environment variables..."
-ansible-vault decrypt .env.enc --output .env --vault-password-file=<(echo "$VAULT_PASS")
-
-# Load variables
+echo "[debug] Loading environment variables from .env..."
 source .env
 
 # Get removal token from GitHub API
