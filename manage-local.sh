@@ -128,7 +128,7 @@ get_remove_token() {
 # List runner containers. Output format: "<id>\t<name>"
 #######################################
 list_runner_containers() {
-  docker ps --filter "name=runner" --format "{{.ID}}\t{{.Names}}"
+  docker ps --filter "name=^runner-" --format "{{.ID}}\t{{.Names}}"
 }
 
 #######################################
