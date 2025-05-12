@@ -164,13 +164,7 @@ start_runners() {
   log "info" "Building runner image (${SERVICE_NAME}-runner:latest)..."
   ${COMPOSE_CMD} build runner
 
-  # Ensure 'backend' network exists
-  if ! docker network ls --format '{{.Name}}' | grep -q '^backend$'; then
-    log "info" "Creating Docker network 'backend'..."
-    docker network create backend
-  fi
-
-  # Launch new runners
+  # Launch new runners via compose run to ensure proper networking and links
   for ((i=1; i<=to_add; i++)); do
     local slot=$((existing_count + i))
     local slot_str
@@ -179,21 +173,17 @@ start_runners() {
     ts=$(date -u +%Y%m%dT%H%M%S)
     local instance_name="runner-${SERVICE_NAME}-${ENVIRONMENT}-slot${slot_str}-${ts}"
 
-    log "info" "Starting runner container: $instance_name"
-    docker run -d \
-      --name "${instance_name}" \
-      --hostname "${instance_name}" \
-      --network backend \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      --env-file .env \
+    log "info" "Starting runner container via compose run: $instance_name"
+    ${COMPOSE_CMD} run -d --no-deps --name "${instance_name}" \
       -e RUNNER_SLOT="${slot_str}" \
       -e RUNNER_TIMESTAMP="${ts}" \
       -e RUNNER_NAME="${instance_name}" \
       -e RUNNER_LABELS="self-hosted,${SERVICE_NAME},${ENVIRONMENT},slot-${slot_str}" \
-      "${SERVICE_NAME}-runner:latest"
+      runner
   done
 
   log "info" "Started $to_add new runner(s); total now $desired_total."
+  return
 }
 
 #######################################
