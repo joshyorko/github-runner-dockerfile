@@ -1,16 +1,16 @@
 services:
   runner:
     build: .
-    hostname: "runner-{{.Task.Slot}}"
+    hostname: "runner-${RUNNER_SLOT}"
     restart: unless-stopped
     networks:
       - backend
     env_file: .env
     environment:
-      - SERVICE_NAME=github-runner
-      - ENVIRONMENT=prod
-      - RUNNER_SLOT={{printf "%02d" .Task.Slot}}
-      - RUNNER_TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+      - SERVICE_NAME=${SERVICE_NAME:-github-runner}
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
+      - RUNNER_SLOT=${RUNNER_SLOT:-}
+      - RUNNER_TIMESTAMP=${RUNNER_TIMESTAMP:-}
       - RUNNER_NAME=runner-${SERVICE_NAME}-${ENVIRONMENT}-slot${RUNNER_SLOT}-${RUNNER_TIMESTAMP}
       - RUNNER_LABELS=self-hosted,${SERVICE_NAME},${ENVIRONMENT},slot-${RUNNER_SLOT}
     volumes:
