@@ -13,12 +13,50 @@ log() {
   echo "[$level] $msg"
 }
 
-# Load env and validate variables
-source .env
-: "${REPO:?Missing REPO in .env}"
-: "${ACCESS_TOKEN:?Missing ACCESS_TOKEN in .env}"
-: "${SERVICE_NAME:?Missing SERVICE_NAME in .env}"
-: "${ENVIRONMENT:?Missing ENVIRONMENT in .env}"
+#######################################
+# Prompt for a variable if it's not already set.
+# Globals:
+#   Environment variables from shell and .env
+# Arguments:
+#   $1 - Variable name (e.g., "REPO")
+#   $2 - Prompt message
+#######################################
+prompt_if_unset() {
+  local var_name="$1"
+  local prompt_msg="$2"
+
+  # Indirect expansion to get current value of $var_name
+  local current_val="${!var_name:-}"
+
+  # If empty, prompt user
+  if [[ -z "$current_val" ]]; then
+    read -rp "$prompt_msg" user_input
+    if [[ -z "$user_input" ]]; then
+      log "error" "Value for $var_name cannot be empty."
+      exit 1
+    fi
+    # Export so subsequent commands in the script see it
+    export "$var_name"="$user_input"
+    log "info" "$var_name set to '$user_input'"
+  else
+    log "info" "$var_name already set (value: $current_val)"
+  fi
+}
+
+# Attempt to load .env if present (this won't error if .env is missing).
+# This allows partial usage of .env and partial usage of prompts.
+if [[ -f .env ]]; then
+  source .env
+fi
+
+#######################################
+# Required environment variables: REPO, ACCESS_TOKEN, SERVICE_NAME, ENVIRONMENT
+# We will prompt for them if unset.
+#######################################
+prompt_if_unset "REPO" "Enter your GitHub repository (e.g. owner/repo): "
+prompt_if_unset "ACCESS_TOKEN" "Enter your GitHub Personal Access Token: "
+prompt_if_unset "SERVICE_NAME" "Enter the SERVICE_NAME (e.g. recoup-runner): "
+prompt_if_unset "ENVIRONMENT" "Enter the ENVIRONMENT name (e.g. dev, prod): "
 
 #######################################
 # Determine Docker Compose command (supports v1 and v2)
@@ -43,11 +81,6 @@ fi
 #######################################
 # Generic function to install a package if missing.
 # Supported package managers: apt-get, yum, dnf, apk, brew
-# Globals:
-#   EUID, SUDO
-# Arguments:
-#   $1 - The command name to check (e.g. jq, fzf)
-#   $2 - The package name for the manager if different (optional)
 #######################################
 install_package_if_missing() {
   local cmd_name="$1"
@@ -59,7 +92,6 @@ install_package_if_missing() {
 
   log "info" "$cmd_name not found, attempting to install..."
 
-  # Determine sudo usage
   if [[ "$EUID" -ne 0 && -n "$(command -v sudo || true)" ]]; then
     SUDO="sudo"
   else
@@ -100,7 +132,7 @@ list_runner_containers() {
 }
 
 #######################################
-# Start N runners by launching individual containers
+# Start N runners by launching containers
 # Arguments:
 #   $1 - Desired total number of runners
 #######################################
@@ -123,10 +155,12 @@ start_runners() {
   fi
 
   local to_add=$((desired_total - existing_count))
-  log "info" "Building runner image..."
+
+  # Build the runner image via docker compose to ensure it's available locally
+  log "info" "Building runner image (${SERVICE_NAME}-runner:latest)..."
   ${COMPOSE_CMD} build runner
 
-  # Ensure network exists
+  # Ensure 'backend' network exists
   if ! docker network ls --format '{{.Name}}' | grep -q '^backend$'; then
     log "info" "Creating Docker network 'backend'..."
     docker network create backend
@@ -141,7 +175,7 @@ start_runners() {
     ts=$(date -u +%Y%m%dT%H%M%S)
     local instance_name="runner-${SERVICE_NAME}-${ENVIRONMENT}-slot${slot_str}-${ts}"
 
-    log "info" "Starting runner container $instance_name..."
+    log "info" "Starting runner container: $instance_name"
     docker run -d \
       --name "${instance_name}" \
       --hostname "${instance_name}" \
@@ -170,8 +204,8 @@ teardown_runners() {
     return
   fi
 
-  local token
   log "info" "Fetching removal token..."
+  local token
   token=$(get_remove_token)
 
   if [[ -z "$token" || "$token" == "null" ]]; then
@@ -201,7 +235,6 @@ interactive_menu() {
   install_package_if_missing "fzf"
 
   local action
-  # Show two main options
   action=$(printf "Start runners\nTear down runners" | fzf --height=10 --border --prompt="Action> ")
 
   case "$action" in
@@ -215,8 +248,8 @@ interactive_menu() {
       start_runners "$num"
       ;;
     "Tear down runners")
-      # Add an "ALL" option
       local choices
+      # Add an "ALL" option
       choices=$( { echo -e "ALL\n"; list_runner_containers; } | fzf --multi --height=20 --border --prompt="Select runners> " )
       local ids=()
 
@@ -239,7 +272,9 @@ interactive_menu() {
 }
 
 #######################################
-# Main: interpret command line arguments
+# Main logic: if no args, run interactive menu.
+# If 1 numeric arg, start that many runners.
+# Otherwise, print usage.
 #######################################
 if [[ $# -eq 0 ]]; then
   interactive_menu
