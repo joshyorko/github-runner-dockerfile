@@ -22,10 +22,12 @@ if [[ -z "$REMOVE_TOKEN" || "$REMOVE_TOKEN" == "null" ]]; then
 fi
 
 echo "[debug] Removing runners..."
+# Define runner working directory inside container
+RUNNER_DIR="/docker/actions-runner"
 # Find runner containers by name and remove runners
 for cid in $(docker ps --filter "name=runner" -q); do
   echo "[debug] Removing runner in container $cid"
-  docker exec "$cid" /home/docker/actions-runner/config.sh remove --unattended --token "$REMOVE_TOKEN" || \
+  docker exec -w "$RUNNER_DIR" "$cid" ./config.sh remove --unattended --token "$REMOVE_TOKEN" || \
     echo "[warning] Failed to remove runner in $cid"
 done
 
