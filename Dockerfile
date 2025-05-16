@@ -52,10 +52,6 @@ WORKDIR /home/docker/actions-runner
 COPY --chown=docker:docker start.sh /home/docker/start.sh
 RUN chmod +x /home/docker/start.sh
 
-# ADD RCC!
-ADD https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc /usr/local/bin/rcc
-RUN chmod +x /usr/local/bin/rcc
-
 ENV NODE_VERSION=22.13.0
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 ENV NVM_DIR=/home/docker/.nvm
