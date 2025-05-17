@@ -30,7 +30,7 @@ services:
       - "github.com:140.82.113.4"
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 3
       resources:
         reservations:
           cpus: 0.5
