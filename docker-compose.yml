@@ -4,7 +4,7 @@ name: "${SERVICE_NAME:-github-runner}-docker-compose"
 services:
   runner:
     # Explicitly name the image so it matches the script usage: "${SERVICE_NAME}-runner:latest"
-    image: "${SERVICE_NAME}-runner:latest"
+    image: ghcr.io/yorko-io/github-runner:latest
     build:
       context: .
       dockerfile: ./Dockerfile
