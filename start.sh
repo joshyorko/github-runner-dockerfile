@@ -23,10 +23,25 @@ if ! curl -sf https://api.github.com/zen > /dev/null; then
   exit 1
 fi
 
+# Validate that either REPO or ORG is set
+if [[ -z "${REPO:-}" && -z "${ORG:-}" ]]; then
+  echo "[error] Missing REPO or ORG" >&2
+  exit 1
+fi
+
+# Determine target API path and GitHub URL based on scope
+if [[ -n "${ORG:-}" ]]; then
+  TARGET_PATH="orgs/${ORG}"
+  GH_URL="https://github.com/${ORG}"
+else
+  TARGET_PATH="repos/${REPO}"
+  GH_URL="https://github.com/${REPO}"
+fi
+
 # Get registration token
 echo "[debug] Getting registration token..."
 REG_TOKEN=$(curl -s -X POST -H "Authorization: token ${ACCESS_TOKEN}" \
-    "https://api.github.com/repos/${REPO}/actions/runners/registration-token" \
+    "https://api.github.com/${TARGET_PATH}/actions/runners/registration-token" \
     | jq -r .token)
 
 if [ -z "${REG_TOKEN}" ] || [ "${REG_TOKEN}" = "null" ]; then
@@ -46,7 +61,7 @@ export ACTIONS_RUNTIME_URL="${ACTIONS_RESULTS_URL}"
 echo "[debug] Configuring runner (non-interactive)..."
 set -x # Enable command tracing
 ./config.sh --unattended \
-  --url "https://github.com/${REPO}" \
+  --url "${GH_URL}" \
   --token "${REG_TOKEN}" \
   --name "${RUNNER_NAME}" \
   --work "${RUNNER_WORKDIR}" \
@@ -74,7 +89,7 @@ cleanup() {
   echo "[debug] Cleaning up runner..."
   # Get a removal token
   REMOVE_TOKEN=$(curl -s -X POST -H "Authorization: token ${ACCESS_TOKEN}" \
-      "https://api.github.com/repos/${REPO}/actions/runners/remove-token" \
+      "https://api.github.com/${TARGET_PATH}/actions/runners/remove-token" \
       | jq -r .token)
   
   if [ -n "${REMOVE_TOKEN}" ] && [ "${REMOVE_TOKEN}" != "null" ]; then
