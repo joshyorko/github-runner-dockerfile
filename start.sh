@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${REPO:?Missing REPO}"
+# : "${REPO:?Missing REPO}" # This will be handled by the logic below
 : "${ACCESS_TOKEN:?Missing ACCESS_TOKEN}"
+
+if [ -n "${ORG_NAME:-}" ]; then
+  echo "[info] Configuring runner for organization: ${ORG_NAME}"
+  RUNNER_TARGET_URL="https://github.com/${ORG_NAME}"
+  RUNNER_API_URL_BASE="https://api.github.com/orgs/${ORG_NAME}"
+elif [ -n "${REPO:-}" ]; then
+  echo "[info] Configuring runner for repository: ${REPO}"
+  RUNNER_TARGET_URL="https://github.com/${REPO}"
+  RUNNER_API_URL_BASE="https://api.github.com/repos/${REPO}"
+else
+  echo "[error] Missing REPO or ORG_NAME environment variable. Please set one and ensure it's not empty." >&2
+  exit 1
+fi
 
 # Defaults
 SERVICE_NAME="${SERVICE_NAME:-github-runner}"
@@ -26,7 +39,7 @@ fi
 # Get registration token
 echo "[debug] Getting registration token..."
 REG_TOKEN=$(curl -s -X POST -H "Authorization: token ${ACCESS_TOKEN}" \
-    "https://api.github.com/repos/${REPO}/actions/runners/registration-token" \
+    "${RUNNER_API_URL_BASE}/actions/runners/registration-token" \
     | jq -r .token)
 
 if [ -z "${REG_TOKEN}" ] || [ "${REG_TOKEN}" = "null" ]; then
@@ -46,7 +59,7 @@ export ACTIONS_RUNTIME_URL="${ACTIONS_RESULTS_URL}"
 echo "[debug] Configuring runner (non-interactive)..."
 set -x # Enable command tracing
 ./config.sh --unattended \
-  --url "https://github.com/${REPO}" \
+  --url "${RUNNER_TARGET_URL}" \
   --token "${REG_TOKEN}" \
   --name "${RUNNER_NAME}" \
   --work "${RUNNER_WORKDIR}" \
@@ -74,7 +87,7 @@ cleanup() {
   echo "[debug] Cleaning up runner..."
   # Get a removal token
   REMOVE_TOKEN=$(curl -s -X POST -H "Authorization: token ${ACCESS_TOKEN}" \
-      "https://api.github.com/repos/${REPO}/actions/runners/remove-token" \
+      "${RUNNER_API_URL_BASE}/actions/runners/remove-token" \
       | jq -r .token)
   
   if [ -n "${REMOVE_TOKEN}" ] && [ "${REMOVE_TOKEN}" != "null" ]; then
