@@ -36,28 +36,28 @@ services:
           cpus: 0.5
           memory: 1024M
 
-  #cache:
-  #  image: ghcr.io/falcondev-oss/github-actions-cache-server:latest
-  #  restart: unless-stopped
-  #  networks:
-  #    - backend
-  #  ports:
-  #    - '3000:3000'
-  #  environment:
-  #    API_BASE_URL: http://cache:3000
-  #    STORAGE_DRIVER: filesystem
-  #    STORAGE_FILESYSTEM_PATH: /app/.data/storage/filesystem
-  #    DB_DRIVER: sqlite
-  #    CACHE_CLEANUP_OLDER_THAN_DAYS: 90
-  #    CACHE_CLEANUP_CRON: "0 0 * * *"
-  #    UPLOAD_CLEANUP_CRON: "*/10 * * * *"
-  #    ENABLE_DIRECT_DOWNLOADS: "false"
-  #  volumes:
-  #    - cache:/app/.data
+  cache:
+    image: ghcr.io/falcondev-oss/github-actions-cache-server:latest
+    restart: unless-stopped
+    networks:
+      - backend
+    ports:
+      - '3000:3000'
+    environment:
+      API_BASE_URL: http://cache:3000
+      STORAGE_DRIVER: filesystem
+      STORAGE_FILESYSTEM_PATH: /app/.data/storage/filesystem
+      DB_DRIVER: sqlite
+      CACHE_CLEANUP_OLDER_THAN_DAYS: 90
+      CACHE_CLEANUP_CRON: "0 0 * * *"
+      UPLOAD_CLEANUP_CRON: "*/10 * * * *"
+      ENABLE_DIRECT_DOWNLOADS: "false"
+    volumes:
+      - cache:/app/.data
 
-#volumes:
-#  cache:
-#
+volumes:
+  cache:
+
 networks:
   backend:
     external: false

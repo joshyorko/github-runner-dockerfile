@@ -54,8 +54,8 @@ export VSS_AGENT_CONNECT_TIMEOUT=180
 export VSS_AGENT_DOWNLOAD_TIMEOUT=180
 
 # Configure Actions cache and runtime URLs
-#xport ACTIONS_CACHE_URL="${ACTIONS_CACHE_URL:-${ACTIONS_RESULTS_URL}}"
-#xport ACTIONS_RUNTIME_URL="${ACTIONS_RESULTS_URL}"
+export ACTIONS_CACHE_URL="${ACTIONS_CACHE_URL:-${ACTIONS_RESULTS_URL}}"
+export ACTIONS_RUNTIME_URL="${ACTIONS_RESULTS_URL}"
 
 # Configure runner in unattended mode
 echo "[debug] Configuring runner (non-interactive)..."
