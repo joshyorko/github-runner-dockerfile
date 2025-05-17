@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM ubuntu:24.04
 
-ARG RUNNER_VERSION="2.322.0"
+ARG RUNNER_VERSION="2.324.0"
 ARG RUNNER_ARCH=x64
 
 # Prevents installdependencies.sh from prompting the user and blocking the image creation
