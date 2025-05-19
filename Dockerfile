@@ -10,9 +10,20 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update -y && apt upgrade -y && useradd -m docker
 RUN apt install -y --no-install-recommends \
     curl jq build-essential libssl-dev libffi-dev libicu-dev python3 python3-venv python3-dev python3-pip git unzip \
+    gpg \
+    lsb-release \
     ca-certificates openssl zstd \
     # Network utilities for diagnostics
-    iputils-ping iproute2 dnsutils
+    iputils-ping iproute2 dnsutils \
+    # Ansible and its dependencies
+    ansible
+
+# Install Docker CLI (for Docker-outside-of-Docker)
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends docker-ce-cli \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install RCC (Robocorp Control Center)
 RUN curl -o /usr/local/bin/rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc && \
