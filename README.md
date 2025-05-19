@@ -130,3 +130,61 @@ docker run \
   -e ENVIRONMENT=dev \
   <your-dockerhub-username>/github-runner:latest
 ```
+
+## Docker-outside-of-Docker Setup
+
+To enable a GitHub Action runner container to execute Docker commands on the host machine, you need to mount the Docker socket from the host into the container. This allows Docker commands executed inside the container to be reflected directly on the host.
+
+### Setup Instructions
+
+1. Ensure the Docker socket is mounted in your `docker-compose.yml` file:
+   ```yaml
+   services:
+     runner:
+       volumes:
+         - /var/run/docker.sock:/var/run/docker.sock
+   ```
+
+2. Set the necessary environment variables in your `.env` file:
+   ```env
+   REPO=owner/repo
+   ACCESS_TOKEN=your-github-personal-access-token
+   SERVICE_NAME=github-runner
+   ENVIRONMENT=dev
+   ```
+
+### Security Implications
+
+Mounting the Docker socket from the host into the container can have significant security implications. It effectively grants the container root access to the host machine, as Docker commands can be used to control the host's Docker daemon. This can potentially be exploited by malicious actors if they gain access to the container.
+
+To mitigate these risks, consider the following:
+
+- Limit the permissions and access to the container.
+- Use network and firewall rules to restrict access to the container.
+- Regularly monitor and audit the container's activity.
+
+## Comparison: Docker-outside-of-Docker vs. Docker-in-Docker (DinD)
+
+### Docker-outside-of-Docker
+
+**Pros:**
+- Simpler setup and configuration.
+- Directly affects the host's Docker environment.
+
+**Cons:**
+- Significant security risks due to the mounted Docker socket.
+- Potential for conflicts with the host's Docker environment.
+
+### Docker-in-Docker (DinD)
+
+**Pros:**
+- Isolated Docker environment within the container.
+- Reduced risk of affecting the host's Docker environment.
+
+**Cons:**
+- More complex setup and configuration.
+- Performance overhead due to nested Docker environments.
+
+### Recommendation
+
+Based on the analysis, Docker-outside-of-Docker is recommended for simpler setups where security risks can be managed. For more secure and isolated environments, consider using Docker-in-Docker (DinD) despite the additional complexity.

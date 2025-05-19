@@ -21,7 +21,7 @@ services:
       - RUNNER_NAME=runner-${SERVICE_NAME}-${ENVIRONMENT}-slot${RUNNER_SLOT}-${RUNNER_TIMESTAMP}
       - RUNNER_LABELS=self-hosted,${SERVICE_NAME},${ENVIRONMENT},slot-${RUNNER_SLOT}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock # Mounting Docker socket for Docker-outside-of-Docker setup
     dns:
       - 8.8.8.8
       - 1.1.1.1
